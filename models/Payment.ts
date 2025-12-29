@@ -42,6 +42,32 @@ const paymentSchema = new Schema<IPayment>({
     ref: 'User',
   },
   rejectionReason: String,
+  // v2.0.0 fields
+  interestPortion: {
+    type: Number,
+    min: [0, 'Interest portion cannot be negative'],
+  },
+  principalPortion: {
+    type: Number,
+    min: [0, 'Principal portion cannot be negative'],
+  },
+  interestCalculatedToDate: Date,
+  outstandingPrincipalBefore: {
+    type: Number,
+    min: [0, 'Outstanding principal before cannot be negative'],
+  },
+  outstandingPrincipalAfter: {
+    type: Number,
+    min: [0, 'Outstanding principal after cannot be negative'],
+  },
+  accruedInterestBefore: {
+    type: Number,
+    min: [0, 'Accrued interest before cannot be negative'],
+  },
+  accruedInterestAfter: {
+    type: Number,
+    min: [0, 'Accrued interest after cannot be negative'],
+  },
 }, {
   timestamps: true,
 });
@@ -51,8 +77,10 @@ paymentSchema.index({ loanId: 1 });
 paymentSchema.index({ userId: 1 });
 paymentSchema.index({ status: 1 });
 paymentSchema.index({ createdAt: -1 });
+// v2.0.0 indexes
+paymentSchema.index({ interestCalculatedToDate: 1 });
+paymentSchema.index({ loanId: 1, createdAt: 1 });
 
 const Payment: Model<IPayment> = mongoose.models.Payment || mongoose.model<IPayment>('Payment', paymentSchema);
 
 export default Payment;
-

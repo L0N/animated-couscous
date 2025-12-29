@@ -1,5 +1,5 @@
 import mongoose, { Schema, Model } from 'mongoose';
-import { ILoan, LoanStatus } from '@/types';
+import { ILoan, LoanStatus, LoanVersion } from '@/types';
 
 const loanSchema = new Schema<ILoan>({
   reference: {
@@ -63,6 +63,37 @@ const loanSchema = new Schema<ILoan>({
     default: false,
   },
   rejectionReason: String,
+  // v2.0.0 fields
+  loanVersion: {
+    type: String,
+    enum: Object.values(LoanVersion),
+    default: LoanVersion.V2,
+    required: true,
+  },
+  outstandingPrincipal: {
+    type: Number,
+    min: [0, 'Outstanding principal cannot be negative'],
+  },
+  accruedInterest: {
+    type: Number,
+    default: 0,
+    min: [0, 'Accrued interest cannot be negative'],
+  },
+  lastInterestCalcDate: Date,
+  totalInterestCharged: {
+    type: Number,
+    min: [0, 'Total interest charged cannot be negative'],
+  },
+  annualInterestRate: {
+    type: Number,
+    min: [0, 'Annual interest rate cannot be negative'],
+  },
+  hasPartialPayments: {
+    type: Boolean,
+    default: false,
+  },
+  extendedDueDate: Date,
+  interestFrozenAt: Date,
 }, {
   timestamps: true,
 });
@@ -73,6 +104,11 @@ loanSchema.index({ status: 1 });
 loanSchema.index({ dueDate: 1 });
 loanSchema.index({ reference: 1 });
 loanSchema.index({ createdAt: -1 });
+// v2.0.0 indexes
+loanSchema.index({ loanVersion: 1 });
+loanSchema.index({ lastInterestCalcDate: 1 });
+loanSchema.index({ loanVersion: 1, status: 1 });
+loanSchema.index({ userId: 1, loanVersion: 1 });
 
 // Pre-save: generate reference number
 loanSchema.pre('save', async function (next) {
@@ -95,4 +131,3 @@ loanSchema.pre('save', async function (next) {
 const Loan: Model<ILoan> = mongoose.models.Loan || mongoose.model<ILoan>('Loan', loanSchema);
 
 export default Loan;
-
