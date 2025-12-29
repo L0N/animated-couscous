@@ -11,6 +11,19 @@ export interface IKYC {
   verified: boolean;
 }
 
+// User status for v2.0.0 credit rebuilding
+export enum UserStatus {
+  ACTIVE = 'active',
+  REBUILDING = 'rebuilding',
+  NEW = 'new',
+}
+
+// Trustworthy status path tracking
+export enum TrustworthyPath {
+  TIER_BASED = 'tier_based',
+  EXPERIENCE_BASED = 'experience_based',
+}
+
 export interface IUser extends Document {
   _id: Types.ObjectId;
   name: string;
@@ -22,8 +35,32 @@ export interface IUser extends Document {
   onTimeCount: number;
   isTrustworthy: boolean;
   kyc: IKYC;
+  // v2.0.0 fields
+  status: UserStatus;
+  consecutiveOnTimePayments: number;
+  totalConsecutiveOnTimePayments: number;
+  trustworthyPath?: TrustworthyPath;
+  lastTierUpgrade?: Date;
   createdAt: Date;
   updatedAt: Date;
+}
+
+// Loan version for backward compatibility
+export enum LoanVersion {
+  V1 = 'v1',
+  V2 = 'v2',
+}
+
+// Enhanced loan status for v2.0.0
+export enum LoanStatusV2 {
+  APPLIED = 'applied',
+  APPROVED = 'approved',
+  DISBURSED = 'disbursed',
+  ACTIVE = 'active',
+  LATE = 'late',
+  DEFAULTED = 'defaulted',
+  PAID = 'paid',
+  REPAID = 'repaid',
 }
 
 // Loan Types
@@ -45,6 +82,16 @@ export interface ILoan extends Document {
   overdueSince?: Date;
   isAutoApproved: boolean;
   rejectionReason?: string;
+  // v2.0.0 fields
+  loanVersion: LoanVersion;
+  outstandingPrincipal?: number;
+  accruedInterest?: number;
+  lastInterestCalcDate?: Date;
+  totalInterestCharged?: number;
+  annualInterestRate?: number;
+  hasPartialPayments?: boolean;
+  extendedDueDate?: Date;
+  interestFrozenAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -62,6 +109,14 @@ export interface IPayment extends Document {
   verifiedAt?: Date;
   verifiedBy?: Types.ObjectId | IUser;
   rejectionReason?: string;
+  // v2.0.0 fields
+  interestPortion?: number;
+  principalPortion?: number;
+  interestCalculatedToDate?: Date;
+  outstandingPrincipalBefore?: number;
+  outstandingPrincipalAfter?: number;
+  accruedInterestBefore?: number;
+  accruedInterestAfter?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -87,4 +142,3 @@ export interface IAuditLog extends Document {
   ipAddress?: string;
   createdAt: Date;
 }
-

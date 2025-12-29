@@ -1,5 +1,5 @@
 import mongoose, { Schema, Model } from 'mongoose';
-import { IUser, UserRole, IDType } from '@/types';
+import { IUser, UserRole, IDType, UserStatus, TrustworthyPath } from '@/types';
 
 const kycSchema = new Schema({
   idType: {
@@ -63,6 +63,27 @@ const userSchema = new Schema<IUser>({
     type: kycSchema,
     default: () => ({ verified: false }),
   },
+  // v2.0.0 fields
+  status: {
+    type: String,
+    enum: Object.values(UserStatus),
+    default: UserStatus.NEW,
+  },
+  consecutiveOnTimePayments: {
+    type: Number,
+    default: 0,
+    min: [0, 'Consecutive on-time payments cannot be negative'],
+  },
+  totalConsecutiveOnTimePayments: {
+    type: Number,
+    default: 0,
+    min: [0, 'Total consecutive on-time payments cannot be negative'],
+  },
+  trustworthyPath: {
+    type: String,
+    enum: Object.values(TrustworthyPath),
+  },
+  lastTierUpgrade: Date,
 }, {
   timestamps: true,
 });
@@ -72,6 +93,10 @@ userSchema.index({ email: 1 });
 userSchema.index({ role: 1 });
 userSchema.index({ currentLimit: 1 });
 userSchema.index({ isTrustworthy: 1 });
+// v2.0.0 indexes
+userSchema.index({ status: 1 });
+userSchema.index({ consecutiveOnTimePayments: 1 });
+userSchema.index({ totalConsecutiveOnTimePayments: 1 });
 
 // Don't return password in JSON
 userSchema.set('toJSON', {
@@ -84,4 +109,3 @@ userSchema.set('toJSON', {
 const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>('User', userSchema);
 
 export default User;
-
