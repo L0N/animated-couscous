@@ -15,6 +15,7 @@ import Loan from '@/models/Loan';
 import User from '@/models/User';
 import Payment from '@/models/Payment';
 import { createInterestCalculationRecord } from '@/models/InterestCalculation';
+import { fixTierProgressionData, CorrectionSummary } from '@/scripts/fixTierProgressionData';
 
 /**
  * Migration configuration
@@ -27,7 +28,7 @@ export const MIGRATION_CONFIG = {
 } as const;
 
 /**
- * Migration status tracking
+ * Migration status tracking (v2.0.1 enhanced)
  */
 export interface MigrationStatus {
   isComplete: boolean;
@@ -37,8 +38,9 @@ export interface MigrationStatus {
   migratedRecords: number;
   failedRecords: number;
   errors: string[];
-  phase: 'not_started' | 'users' | 'loans' | 'payments' | 'validation' | 'complete' | 'failed';
+  phase: 'not_started' | 'users' | 'loans' | 'payments' | 'validation' | 'data_correction' | 'complete' | 'failed';
   progress: number; // 0-100
+  dataCorrectionSummary?: CorrectionSummary;
 }
 
 /**
@@ -384,7 +386,7 @@ export async function migratePayments(): Promise<MigrationResult[]> {
 }
 
 /**
- * Perform complete migration
+ * Perform complete migration with data correction (v2.0.1 enhanced)
  */
 export async function performMigration(): Promise<MigrationStatus> {
   const startTime = getPNGNow();
@@ -403,6 +405,21 @@ export async function performMigration(): Promise<MigrationStatus> {
     // Check if migration is needed
     const migrationCheck = await isMigrationNeeded();
     if (!migrationCheck.needed) {
+      // Even if no migration needed, run data correction for v2.0.1
+      status.phase = 'data_correction';
+      status.progress = 80;
+      
+      try {
+        const correctionSummary = await fixTierProgressionData();
+        status.dataCorrectionSummary = correctionSummary;
+        
+        if (correctionSummary.correctionsFailed > 0) {
+          status.errors.push(`Data correction had ${correctionSummary.correctionsFailed} failures`);
+        }
+      } catch (error) {
+        status.errors.push(`Data correction failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+      
       status.isComplete = true;
       status.completedAt = getPNGNow();
       status.phase = 'complete';
@@ -421,7 +438,7 @@ export async function performMigration(): Promise<MigrationStatus> {
     status.migratedRecords += successfulUsers;
     status.failedRecords += failedUsers.length;
     status.errors.push(...failedUsers.flatMap(r => r.errors));
-    status.progress = (status.migratedRecords / status.totalRecords) * 100;
+    status.progress = (status.migratedRecords / status.totalRecords) * 70; // Reserve 30% for validation and correction
     
     // Phase 2: Migrate loans
     status.phase = 'loans';
@@ -432,7 +449,7 @@ export async function performMigration(): Promise<MigrationStatus> {
     status.migratedRecords += successfulLoans;
     status.failedRecords += failedLoans.length;
     status.errors.push(...failedLoans.flatMap(r => r.errors));
-    status.progress = (status.migratedRecords / status.totalRecords) * 100;
+    status.progress = (status.migratedRecords / status.totalRecords) * 70;
     
     // Phase 3: Migrate payments
     status.phase = 'payments';
@@ -443,14 +460,30 @@ export async function performMigration(): Promise<MigrationStatus> {
     status.migratedRecords += successfulPayments;
     status.failedRecords += failedPayments.length;
     status.errors.push(...failedPayments.flatMap(r => r.errors));
-    status.progress = (status.migratedRecords / status.totalRecords) * 100;
+    status.progress = (status.migratedRecords / status.totalRecords) * 70;
     
     // Phase 4: Validation
     status.phase = 'validation';
+    status.progress = 80;
     const validation = await validateMigration();
     if (!validation.isValid) {
       status.errors.push(`Validation failed: ${validation.invalidRecords} invalid records found`);
       status.errors.push(...validation.issues.filter(i => i.severity === 'error').map(i => i.issue));
+    }
+    
+    // Phase 5: Data correction (v2.0.1)
+    status.phase = 'data_correction';
+    status.progress = 90;
+    
+    try {
+      const correctionSummary = await fixTierProgressionData();
+      status.dataCorrectionSummary = correctionSummary;
+      
+      if (correctionSummary.correctionsFailed > 0) {
+        status.errors.push(`Data correction had ${correctionSummary.correctionsFailed} failures`);
+      }
+    } catch (error) {
+      status.errors.push(`Data correction failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
     
     // Complete
@@ -705,4 +738,3 @@ export async function rollbackMigration(): Promise<{
     };
   }
 }
-

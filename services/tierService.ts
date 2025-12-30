@@ -1,11 +1,12 @@
 /**
- * Enhanced Tier Service (v2.0.0)
+ * Enhanced Tier Service (v2.0.1)
  * 
- * Implements dual trustworthy paths and credit rebuilding:
- * - Path 1 (Tier-Based): 2 consecutive on-time payments at current tier
- * - Path 2 (Experience-Based): 10 total consecutive on-time payments across all loans
- * - Credit rebuilding with REBUILDING status after default
- * - Enhanced tier progression with Diamond tier requiring trustworthy status
+ * Implements correct tier progression and trustworthy status logic:
+ * - Tier Progression: 2 consecutive on-time payments advances to next tier
+ * - Trustworthy Status Path 1: 10 consecutive on-time payments on any tier
+ * - Trustworthy Status Path 2: Complete progression through all tiers (Bronze→Diamond)
+ * - Diamond tier access: Requires trustworthy status achievement
+ * - Default handling: Resets both tier progression AND trustworthy building progress
  */
 
 import { IUser, UserStatus, TrustworthyPath, LoanVersion } from '@/types';
@@ -25,15 +26,15 @@ export const TIER_NAMES: Record<number, string> = {
 };
 
 /**
- * Trustworthy path requirements
+ * Trustworthy status requirements (v2.0.1 corrected)
  */
 export const TRUSTWORTHY_REQUIREMENTS = {
-  TIER_BASED_CONSECUTIVE: parseInt(process.env.TRUSTWORTHY_CONSECUTIVE_REQUIRED || '2'),
-  EXPERIENCE_BASED_TOTAL: parseInt(process.env.TRUSTWORTHY_TOTAL_ALTERNATIVE || '10'),
+  CONSECUTIVE_PAYMENTS: parseInt(process.env.TRUSTWORTHY_CONSECUTIVE_REQUIRED || '10'),
+  COMPLETE_TIER_PROGRESSION: true, // Must reach Diamond tier through progression
 } as const;
 
 /**
- * Handle on-time repayment with dual trustworthy paths and tier progression
+ * Handle on-time repayment with corrected tier progression and trustworthy logic (v2.0.1)
  */
 export function handleOnTimeRepayment(
   user: IUser,
@@ -52,19 +53,6 @@ export function handleOnTimeRepayment(
   let trustworthyGranted = false;
   let statusChanged = false;
   const messages: string[] = [];
-
-  // Check for trustworthy status (both paths)
-  if (!user.isTrustworthy) {
-    const tierBasedEligible = user.consecutiveOnTimePayments >= TRUSTWORTHY_REQUIREMENTS.TIER_BASED_CONSECUTIVE;
-    const experienceBasedEligible = user.totalConsecutiveOnTimePayments >= TRUSTWORTHY_REQUIREMENTS.EXPERIENCE_BASED_TOTAL;
-
-    if (tierBasedEligible || experienceBasedEligible) {
-      user.isTrustworthy = true;
-      user.trustworthyPath = tierBasedEligible ? TrustworthyPath.TIER_BASED : TrustworthyPath.EXPERIENCE_BASED;
-      trustworthyGranted = true;
-      messages.push(`🌟 Trustworthy status granted via ${user.trustworthyPath.toLowerCase().replace('_', '-')} path!`);
-    }
-  }
 
   // Check for tier progression (after 2 consecutive payments at current tier)
   if (user.consecutiveOnTimePayments >= 2) {
@@ -85,10 +73,26 @@ export function handleOnTimeRepayment(
         tierUpgraded = true;
         
         messages.push(`🚀 Tier upgraded from ${TIER_NAMES[oldLimit]} (K${oldLimit}) to ${TIER_NAMES[nextLimit]} (K${nextLimit})!`);
+        
+        // Check if user reached Diamond tier through complete progression
+        if (nextLimit === 1000) {
+          user.isTrustworthy = true;
+          user.trustworthyPath = TrustworthyPath.TIER_BASED;
+          trustworthyGranted = true;
+          messages.push(`🌟 Trustworthy status granted for completing full tier progression!`);
+        }
       }
     } else {
       messages.push(`👑 You're at the maximum Diamond tier (K1000)!`);
     }
+  }
+
+  // Check for trustworthy status via 10 consecutive payments
+  if (!user.isTrustworthy && user.totalConsecutiveOnTimePayments >= TRUSTWORTHY_REQUIREMENTS.CONSECUTIVE_PAYMENTS) {
+    user.isTrustworthy = true;
+    user.trustworthyPath = TrustworthyPath.EXPERIENCE_BASED;
+    trustworthyGranted = true;
+    messages.push(`🌟 Trustworthy status granted via 10 consecutive on-time payments!`);
   }
 
   // Update user status if in rebuilding
@@ -111,10 +115,10 @@ export function handleOnTimeRepayment(
 
   // Trustworthy progress messages
   if (!user.isTrustworthy) {
-    const tierBasedRemaining = Math.max(0, TRUSTWORTHY_REQUIREMENTS.TIER_BASED_CONSECUTIVE - user.consecutiveOnTimePayments);
-    const experienceBasedRemaining = Math.max(0, TRUSTWORTHY_REQUIREMENTS.EXPERIENCE_BASED_TOTAL - user.totalConsecutiveOnTimePayments);
+    const consecutiveRemaining = Math.max(0, TRUSTWORTHY_REQUIREMENTS.CONSECUTIVE_PAYMENTS - user.totalConsecutiveOnTimePayments);
+    const tierProgressionPath = user.currentLimit < 1000 ? 'OR complete tier progression to Diamond' : '';
     
-    messages.push(`🌟 Trustworthy progress: ${tierBasedRemaining} more consecutive OR ${experienceBasedRemaining} more total payments`);
+    messages.push(`🌟 Trustworthy progress: ${consecutiveRemaining} more consecutive payments ${tierProgressionPath}`);
   }
 
   return {
@@ -141,7 +145,7 @@ export function handleLateRepayment(user: IUser): IUser {
 }
 
 /**
- * Handle loan default (14+ days overdue) with credit rebuilding
+ * Handle loan default (14+ days overdue) with credit rebuilding (v2.0.1 corrected)
  */
 export function handleDefault(user: IUser): IUser {
   const now = getPNGNow();
@@ -149,14 +153,14 @@ export function handleDefault(user: IUser): IUser {
   // Reset to Bronze tier
   user.currentLimit = 50;
   
-  // Reset consecutive counters
+  // Reset consecutive counters (both tier progression AND trustworthy building)
   user.consecutiveOnTimePayments = 0;
   user.onTimeCount = 0; // Legacy v1.0.0 compatibility
   
   // Reset total consecutive payments (fresh start after default)
   user.totalConsecutiveOnTimePayments = 0;
   
-  // Revoke trustworthy status
+  // Revoke trustworthy status (must be re-earned)
   user.isTrustworthy = false;
   user.trustworthyPath = undefined;
   
@@ -222,36 +226,35 @@ export function getTierProgress(
 }
 
 /**
- * Calculate trustworthy progress for both paths
+ * Calculate trustworthy progress for both paths (v2.0.1 corrected)
  */
 export function getTrustworthyProgress(
-  consecutivePayments: number,
-  totalPayments: number
+  totalPayments: number,
+  currentTier: number
 ): {
-  tierBasedProgress: number;
-  experienceBasedProgress: number;
-  closestPath: 'tier_based' | 'experience_based';
+  consecutivePaymentsProgress: number;
+  tierProgressionProgress: number;
+  closestPath: 'consecutive_payments' | 'tier_progression';
   paymentsNeeded: number;
 } {
-  const tierBasedProgress = Math.min(
-    (consecutivePayments / TRUSTWORTHY_REQUIREMENTS.TIER_BASED_CONSECUTIVE) * 100,
+  const consecutivePaymentsProgress = Math.min(
+    (totalPayments / TRUSTWORTHY_REQUIREMENTS.CONSECUTIVE_PAYMENTS) * 100,
     100
   );
   
-  const experienceBasedProgress = Math.min(
-    (totalPayments / TRUSTWORTHY_REQUIREMENTS.EXPERIENCE_BASED_TOTAL) * 100,
-    100
-  );
+  // Calculate tier progression progress (Bronze=50 to Diamond=1000)
+  const tierIndex = TIER_LIMITS.indexOf(currentTier);
+  const tierProgressionProgress = tierIndex >= 0 ? ((tierIndex + 1) / TIER_LIMITS.length) * 100 : 0;
   
-  const tierBasedRemaining = Math.max(0, TRUSTWORTHY_REQUIREMENTS.TIER_BASED_CONSECUTIVE - consecutivePayments);
-  const experienceBasedRemaining = Math.max(0, TRUSTWORTHY_REQUIREMENTS.EXPERIENCE_BASED_TOTAL - totalPayments);
+  const consecutiveRemaining = Math.max(0, TRUSTWORTHY_REQUIREMENTS.CONSECUTIVE_PAYMENTS - totalPayments);
+  const tierProgressionRemaining = currentTier < 1000 ? 'Complete tier progression to Diamond' : 0;
   
-  const closestPath = tierBasedRemaining <= experienceBasedRemaining ? 'tier_based' : 'experience_based';
-  const paymentsNeeded = closestPath === 'tier_based' ? tierBasedRemaining : experienceBasedRemaining;
+  const closestPath = consecutiveRemaining <= 2 ? 'consecutive_payments' : 'tier_progression';
+  const paymentsNeeded = consecutiveRemaining;
   
   return {
-    tierBasedProgress,
-    experienceBasedProgress,
+    consecutivePaymentsProgress,
+    tierProgressionProgress,
     closestPath,
     paymentsNeeded,
   };
@@ -295,8 +298,8 @@ export function getTierInfo(user: IUser): {
   const trustworthyProgress = user.isTrustworthy 
     ? null 
     : getTrustworthyProgress(
-        user.consecutiveOnTimePayments || 0,
-        user.totalConsecutiveOnTimePayments || 0
+        user.totalConsecutiveOnTimePayments || 0,
+        user.currentLimit
       );
   
   const canUpgrade = nextTierInfo.nextLimit !== null && 
@@ -392,4 +395,3 @@ export function getCreditRebuildingInfo(user: IUser): {
     paymentsToRestore,
   };
 }
-
