@@ -5,6 +5,75 @@ All notable changes to WanPaus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2024-12-29
+
+### 🐛 Fixed
+
+#### Critical Business Logic Correction
+- **Tier progression logic**: Fixed tier-based path to properly upgrade tiers instead of incorrectly granting trustworthy status
+- **Trustworthy status requirements**: Corrected to require either 10 consecutive on-time payments OR complete tier progression (Bronze→Diamond)
+- **Diamond tier access**: Now properly requires trustworthy status achievement before access
+- **Default handling**: Fixed to reset both tier progression AND trustworthy building progress (was inconsistent)
+
+#### Data Integrity
+- **Automatic data correction**: Implemented comprehensive script to identify and fix existing user records with incorrect progression status
+- **Payment history analysis**: Added retroactive analysis of all user payment histories to determine correct tier and trustworthy status
+- **Diamond tier validation**: Corrected users with Diamond tier access who lack proper trustworthy status requirements
+
+### 🔧 Changed
+
+#### Business Logic Clarification
+- **Trustworthy paths redefined**: 
+  - Path 1: 10 consecutive on-time payments on any tier
+  - Path 2: Complete progression through all tiers (Bronze→Silver→Gold→Platinum→Diamond)
+- **Tier progression**: 2 consecutive payments now correctly advances to next tier (not trustworthy status)
+- **Default reset behavior**: Now consistently resets both tier progression counters AND trustworthy building progress
+
+### 🧪 Added
+
+#### Data Correction Infrastructure
+- **Automatic correction script**: `scripts/fixTierProgressionData.ts` with comprehensive user record analysis
+- **User notifications**: Email notifications sent to users whose accounts were corrected
+- **Complete audit trail**: Detailed logging of all corrections made with before/after states
+- **Rollback capability**: Emergency rollback function for data corrections if issues arise
+- **Migration integration**: Data correction automatically runs during deployment
+
+#### Enhanced Testing
+- **Business logic validation**: Comprehensive test cases for corrected tier progression rules
+- **Data correction testing**: Validation of correction script accuracy and safety
+- **Edge case coverage**: Tests for all tier progression and trustworthy status scenarios
+
+### 📊 Impact Assessment
+
+#### Customer Impact
+- **Corrected progression**: Users now receive proper tier upgrades based on payment history
+- **Fair trustworthy status**: Trustworthy status properly granted via correct criteria
+- **Diamond tier protection**: Ensures only qualified users access highest tier
+- **Transparent corrections**: Users notified of any account adjustments made
+
+#### Data Correction Results
+- **Automatic execution**: Runs on deployment to fix existing incorrect records
+- **Comprehensive analysis**: Reviews all user payment histories for accuracy
+- **Safe corrections**: Complete audit trail and rollback capability
+- **User communication**: Email notifications for all account corrections
+
+### 🔒 Security & Compliance
+
+#### Audit Trail Enhancement
+- **Complete correction logging**: Every data correction recorded with full details
+- **Before/after tracking**: Detailed state changes for regulatory compliance
+- **User notification trail**: Record of all communications sent to affected users
+- **Rollback audit**: Complete tracking of any rollback operations performed
+
+### 📚 Documentation Updates
+
+#### Business Logic Documentation
+- **Corrected README.md**: Fixed tier progression and trustworthy status explanations
+- **Updated API examples**: Corrected response formats and business rule examples
+- **Enhanced troubleshooting**: Added guidance for tier progression issues
+
+---
+
 ## [2.0.0] - 2024-12-29
 
 ### 🚀 Added
@@ -340,4 +409,3 @@ For technical support or questions about this release:
 ---
 
 **WanPaus v2.0.0** represents a major evolution in microfinance technology, providing sophisticated daily interest calculations, comprehensive portfolio management, and regulatory-compliant audit trails while maintaining complete backward compatibility with existing loan contracts.
-

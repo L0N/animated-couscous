@@ -11,10 +11,11 @@ A sophisticated microfinance payday loan management system built for Papua New G
 - **Interest caps** preventing predatory lending
 - **PNG timezone-aware calculations** for consistent daily boundaries
 
-### 👥 **Enhanced Credit System**
+### 👥 **Enhanced Credit System (v2.0.1 Corrected)**
+- **Tier progression**: 2 consecutive on-time payments advances to next tier
 - **Dual trustworthy paths**:
-  - **Tier-based**: 2 consecutive on-time payments at current tier
-  - **Experience-based**: 10 total consecutive payments across all loans
+  - **Path 1**: 10 consecutive on-time payments on any tier
+  - **Path 2**: Complete progression through all tiers (Bronze→Silver→Gold→Platinum→Diamond)
 - **Credit rebuilding** with REBUILDING status after default
 - **Diamond tier protection** requiring trustworthy status for K1000 limit
 
@@ -171,17 +172,17 @@ Visit http://localhost:3000
 - Interest after 90 days: K100 × 0.0001096 × 90 = **K0.99**
 - Total due: **K100.99**
 
-### Dual Trustworthy Paths
+### Dual Trustworthy Paths (v2.0.1 Corrected)
 
-#### Path 1: Tier-Based (Fast Track)
-- **Requirement**: 2 consecutive on-time payments at current tier
-- **Benefit**: Unlocks Diamond tier access
-- **Reset**: On any late payment
+#### Path 1: Consecutive Payments
+- **Requirement**: 10 consecutive on-time payments on any tier
+- **Benefit**: Grants trustworthy status and Diamond tier access
+- **Reset**: On any late payment or default
 
-#### Path 2: Experience-Based (Alternative)
-- **Requirement**: 10 total consecutive on-time payments across all loans
-- **Benefit**: Unlocks Diamond tier access
-- **Advantage**: Survives tier resets from defaults
+#### Path 2: Complete Tier Progression
+- **Requirement**: Progress through all tiers (Bronze→Silver→Gold→Platinum→Diamond)
+- **Benefit**: Automatically grants trustworthy status upon reaching Diamond
+- **Advantage**: Achieved through consistent tier advancement
 
 ### Enhanced Auto-Approval Rules
 
@@ -597,4 +598,3 @@ Built for microfinance operations in Papua New Guinea to provide accessible shor
 **Last Updated**: December 2024  
 **Migration**: Automatic from v1.0.0  
 **Compatibility**: Backward compatible with existing loans
-
