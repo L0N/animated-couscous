@@ -1,42 +1,48 @@
-# WanPaus - Microfinance Payday Loan System
+# WanPaus v2.0.0 - Advanced Microfinance Platform
 
-A comprehensive microfinance payday loan management system built for Papua New Guinea. WanPaus enables customer self-service loan applications, automated tier progression, admin oversight, and real-time financial tracking.
+A sophisticated microfinance payday loan management system built for Papua New Guinea. WanPaus v2.0.0 features daily-accruing interest calculations, dual trustworthy paths, comprehensive portfolio management, and regulatory-compliant audit trails.
 
-## 🚀 Features
+## 🚀 What's New in v2.0.0
 
-### Customer Features
-- **Self-Service Loan Applications** with instant calculations
-- **Automated Tier Progression** (K50 → K100 → K200 → K500 → K1000)
-- **Auto-Approval** for trustworthy customers
-- **Payment Proof Upload** with status tracking
-- **Real-Time Loan Dashboard** with repayment progress
+### 💰 **Daily Interest System**
+- **Configurable annual rates** with 2-decimal precision (e.g., 4.25%)
+- **Daily accrual calculation**: `interest = principal × (annualRate/365) × days`
+- **Interest-first payment allocation** for optimal customer outcomes
+- **Interest caps** preventing predatory lending
+- **PNG timezone-aware calculations** for consistent daily boundaries
 
-### Admin Features
-- **One-Click Loan Approval & Disbursement**
-- **Payment Verification** with automatic allocation
-- **Customer Management** with tier controls
-- **Financial Dashboard** with real-time metrics
-- **KYC Document Review**
-- **Audit Trail** for all critical actions
+### 👥 **Enhanced Credit System**
+- **Dual trustworthy paths**:
+  - **Tier-based**: 2 consecutive on-time payments at current tier
+  - **Experience-based**: 10 total consecutive payments across all loans
+- **Credit rebuilding** with REBUILDING status after default
+- **Diamond tier protection** requiring trustworthy status for K1000 limit
 
-### System Features
-- **Automated Reminders** (3, 7, 10 days overdue)
-- **Default Detection** (14+ days → account downgrade)
-- **Interest Rate Discounts** for trustworthy customers
-- **Partial Payment Support** (principal-first allocation)
-- **Email Notifications** for all key events
-- **Secure File Storage** via Vercel Blob
+### 📊 **Portfolio Management**
+- **Historical analysis** with configurable date ranges (30 days to 2 years)
+- **Forward projection simulations** with default rate assumptions
+- **Stress testing** with predefined scenarios (5%, 10%, 15%, 20% + custom)
+- **Break-even analysis** for profitability assessment
+- **Real-time portfolio health monitoring**
+
+### 🤖 **Automation & Compliance**
+- **Daily interest calculation** cron job at midnight PNG time
+- **Automatic migration** from v1.0.0 to v2.0.0
+- **Complete audit trail** for regulatory compliance
+- **Rate limiting** for simulation endpoints
+- **Retry logic** with admin notifications
 
 ## 🛠️ Technology Stack
 
 - **Frontend**: Next.js 14 (App Router), React, TypeScript, Tailwind CSS
 - **Backend**: Next.js API Routes, Mongoose
-- **Database**: MongoDB Atlas
+- **Database**: MongoDB Atlas with enhanced indexes
 - **Authentication**: NextAuth.js with JWT
-- **Email**: Resend
+- **Email**: Resend with enhanced templates
 - **File Storage**: Vercel Blob
-- **Validation**: Zod
-- **Automation**: Vercel Cron Jobs
+- **Validation**: Zod with comprehensive schemas
+- **Automation**: Vercel Cron Jobs with retry logic
+- **Rate Limiting**: Custom implementation with admin bypass
 
 ## 📋 Prerequisites
 
@@ -80,13 +86,43 @@ FROM_EMAIL=noreply@wanpaus.com.pg
 # Vercel Blob Storage
 BLOB_READ_WRITE_TOKEN=vercel_blob_rw_your_token_here
 
-# Cron Job Security
+# v2.0.0 Interest System
+ANNUAL_INTEREST_RATE=4.00
+PNG_TIMEZONE=Pacific/Port_Moresby
+MIN_INTEREST_DAYS=14
+INTEREST_CAP_ENABLED=true
+
+# Loan Terms
+MAX_LOAN_TERM_STANDARD=90
+MAX_LOAN_TERM_WITH_PARTIAL=100
+
+# Credit System
+TRUSTWORTHY_CONSECUTIVE_REQUIRED=2
+TRUSTWORTHY_TOTAL_ALTERNATIVE=10
+
+# Simulation System
+SIMULATION_MIN_DAYS=30
+SIMULATION_MAX_DAYS=730
+SIMULATION_DEFAULT_DAYS=180
+
+# Rate Limiting
+RATE_LIMIT_HISTORICAL=10
+RATE_LIMIT_STRESS_TEST=5
+RATE_LIMIT_SIMULATION=8
+
+# Cron Jobs
 CRON_SECRET=your_strong_random_cron_secret_here
+CRON_MAX_RETRIES=3
+CRON_BATCH_SIZE=50
 
 # System Configuration
 SYSTEM_ADMIN_EMAIL=admin@wanpaus.com.pg
 SYSTEM_ADMIN_PASSWORD=ChangeThisStrongPassword123!
 INITIAL_CASH_BALANCE=10000
+
+# Migration Settings
+AUTO_MIGRATE_ON_DEPLOY=true
+PRESERVE_V1_CONTRACTS=true
 ```
 
 ### 4. Generate NextAuth Secret
@@ -104,6 +140,7 @@ npm run seed
 This will:
 - Create the SystemSettings document with initial cash balance
 - Create the admin user account
+- Run automatic migration if needed
 
 ### 6. Start the development server
 
@@ -113,50 +150,70 @@ npm run dev
 
 Visit http://localhost:3000
 
-## 📊 Business Logic
+## 📊 Business Logic v2.0.0
 
-### Tier System
+### Enhanced Tier System
 
-| Tier | Limit | Progression Rule |
-|------|-------|------------------|
-| Bronze | K50 | Starting tier |
-| Silver | K100 | 2 on-time payments |
-| Gold | K200 | 2 on-time payments |
-| Platinum | K500 | 2 on-time payments |
-| Diamond | K1000 | 2 on-time payments + trustworthy |
+| Tier | Limit | Progression Rule | Trustworthy Requirement |
+|------|-------|------------------|-------------------------|
+| Bronze | K50 | Starting tier | No |
+| Silver | K100 | 2 consecutive on-time payments | No |
+| Gold | K200 | 2 consecutive on-time payments | No |
+| Platinum | K500 | 2 consecutive on-time payments | No |
+| Diamond | K1000 | 2 consecutive on-time payments | **Yes** |
 
-### Interest Rates
+### Daily Interest Calculation
 
-| Term | Base Rate | Trustworthy Discount |
-|------|-----------|---------------------|
-| 14 days | 30% | 5% discount → 25% |
-| 30 days | 60% | 10% discount → 50% |
-| 60 days | 75% | 10% discount → 65% |
-| 90 days | 100% | 15% discount → 85% |
+**Formula**: `interest = principal × (annualRate/365) × daysElapsed`
 
-**Discount Formula**: `floor((baseRate * 100 / 6) / 5) * 5` percentage points
+**Example** (K100 loan, 4% annual, 90 days):
+- Daily rate: 4.00 / 365 = 0.01096%
+- Interest after 90 days: K100 × 0.0001096 × 90 = **K0.99**
+- Total due: **K100.99**
 
-### Auto-Approval Rules
+### Dual Trustworthy Paths
+
+#### Path 1: Tier-Based (Fast Track)
+- **Requirement**: 2 consecutive on-time payments at current tier
+- **Benefit**: Unlocks Diamond tier access
+- **Reset**: On any late payment
+
+#### Path 2: Experience-Based (Alternative)
+- **Requirement**: 10 total consecutive on-time payments across all loans
+- **Benefit**: Unlocks Diamond tier access
+- **Advantage**: Survives tier resets from defaults
+
+### Enhanced Auto-Approval Rules
 
 Loans are auto-approved when ALL conditions are met:
 1. Amount ≤ user's current limit
-2. User has trustworthy status
-3. System has sufficient cash on hand
+2. User has trustworthy status (if required)
+3. System has sufficient cash (with reserve)
 4. User has no overdue or active loans
+5. User account is ACTIVE (not REBUILDING)
+6. KYC verification is complete
+7. No recent defaults (90-day lookback)
 
-### Payment Allocation
+### Interest-First Payment Allocation
 
-Partial payments are allocated as follows:
-1. **Principal first** - Pay down loan amount
-2. **Interest second** - Pay accrued interest
+**v2.0.0 Allocation** (Optimal for customers):
+1. **Accrued interest first** - Pay accumulated interest
+2. **Principal second** - Reduce outstanding balance
+3. **Future interest recalculates** on new principal amount
 
-### Default Handling
+**Example**: K30 payment on K100 loan with K0.16 accrued interest
+- K0.16 → interest
+- K29.84 → principal
+- New outstanding: K70.16 (future interest calculated on this amount)
 
-- **Days 1-13**: Send reminders at days 3, 7, 10
-- **Day 14+**: Mark as defaulted
-  - Reset tier to K50
-  - Remove trustworthy status
-  - Requires rebuilding credit history
+### Credit Rebuilding System
+
+After default (14+ days overdue):
+- **Status**: REBUILDING
+- **Tier**: Reset to Bronze (K50)
+- **Trustworthy**: Revoked
+- **Recovery**: Normal tier progression through on-time payments
+- **Restoration**: Status changes to ACTIVE after 2 consecutive payments
 
 ## 🔐 Default Admin Credentials
 
@@ -166,44 +223,66 @@ After seeding, login with:
 
 ⚠️ **Change these credentials immediately in production!**
 
-## 📁 Project Structure
+## 📁 Enhanced Project Structure
 
 ```
 ├── app/
 │   ├── api/
-│   │   ├── auth/          # Authentication endpoints
-│   │   ├── customer/      # Customer API routes
-│   │   ├── admin/         # Admin API routes
-│   │   └── cron/          # Automated jobs
-│   ├── customer/          # Customer portal pages
-│   ├── admin/             # Admin dashboard pages
-│   └── page.tsx           # Landing/login page
+│   │   ├── auth/                    # Authentication endpoints
+│   │   ├── customer/                # Customer API routes
+│   │   ├── admin/
+│   │   │   ├── simulation/          # Portfolio analysis endpoints
+│   │   │   │   ├── historical/      # Historical analysis
+│   │   │   │   ├── stress-test/     # Stress testing
+│   │   │   │   ├── forward/         # Forward projections
+│   │   │   │   └── breakeven/       # Break-even analysis
+│   │   │   └── migration/           # Migration management
+│   │   └── cron/
+│   │       └── calculate-interest/  # Daily interest calculation
+│   ├── customer/                    # Customer portal pages
+│   ├── admin/                       # Admin dashboard pages
+│   └── page.tsx                     # Landing/login page
 ├── components/
-│   └── ui/                # Reusable UI components
+│   └── ui/                          # Reusable UI components
 ├── lib/
-│   ├── mongodb.ts         # Database connection
-│   ├── auth.ts            # NextAuth configuration
-│   ├── email.ts           # Email service
-│   ├── blob.ts            # File upload
-│   └── validation.ts      # Input validation
-├── models/                # Mongoose models
-│   ├── User.ts
-│   ├── Loan.ts
-│   ├── Payment.ts
+│   ├── mongodb.ts                   # Database connection
+│   ├── auth.ts                      # NextAuth configuration
+│   ├── email.ts                     # Email service
+│   ├── blob.ts                      # File upload
+│   ├── timezone.ts                  # PNG timezone utilities
+│   ├── rateLimiting.ts              # Rate limiting implementation
+│   └── validation.ts                # Input validation
+├── models/                          # Mongoose models
+│   ├── User.ts                      # Enhanced with v2.0.0 fields
+│   ├── Loan.ts                      # Enhanced with v2.0.0 fields
+│   ├── Payment.ts                   # Enhanced with v2.0.0 fields
+│   ├── InterestCalculation.ts       # New audit trail model
 │   ├── SystemSettings.ts
 │   └── AuditLog.ts
-├── services/              # Business logic
-│   ├── tierService.ts
-│   ├── loanService.ts
-│   ├── paymentService.ts
-│   ├── autoApprovalService.ts
+├── services/                        # Business logic
+│   ├── tierService.ts               # Enhanced dual paths
+│   ├── loanService.ts               # Enhanced daily interest
+│   ├── paymentService.ts            # Enhanced allocation
+│   ├── autoApprovalService.ts       # Enhanced v2.0.0 logic
+│   ├── interestService.ts           # New daily calculation engine
+│   ├── simulationService.ts         # New portfolio analysis
+│   ├── migrationService.ts          # New v1→v2 migration
 │   └── financeService.ts
 ├── middleware/
-│   └── auth.ts            # Auth middleware
-├── types/                 # TypeScript types
+│   └── auth.ts                      # Auth middleware
+├── types/                           # TypeScript types
+│   ├── models.ts                    # Enhanced with v2.0.0 types
+│   ├── services.ts
+│   └── api.ts
 ├── scripts/
-│   └── seedSystem.ts      # Database seeding
-└── vercel.json            # Cron configuration
+│   └── seedSystem.ts                # Database seeding
+├── tests/                           # Comprehensive test suite
+│   ├── unit/                        # Unit tests
+│   ├── integration/                 # Integration tests
+│   └── fixtures/                    # Test data
+├── CHANGELOG.md                     # Version history
+├── TECHNICAL_DOCS.md                # Technical documentation
+└── vercel.json                      # Enhanced cron configuration
 ```
 
 ## 🚀 Deployment
@@ -212,67 +291,140 @@ After seeding, login with:
 
 1. Push code to GitHub
 2. Import project in Vercel
-3. Add environment variables
+3. Add all environment variables (25+ for v2.0.0)
 4. Deploy
-5. Run seed script via Vercel CLI:
+5. Migration runs automatically on first deployment
+6. Verify migration status:
    ```bash
-   vercel env pull .env.local
-   npm run seed
+   curl -X GET "https://your-app.vercel.app/api/admin/migration/status" \
+     -H "Authorization: Bearer $ADMIN_TOKEN"
    ```
 
-### Cron Jobs
+### Enhanced Cron Jobs
 
 Cron jobs are automatically configured in `vercel.json`:
-- **Reminders**: Daily at 6 PM (18:00)
-- **Default Check**: Daily at 1 AM (01:00)
+- **Reminders**: Daily at 6 PM PNG time (18:00 UTC+10)
+- **Default Check**: Daily at 1 AM PNG time (01:00 UTC+10)
+- **Interest Calculation**: Daily at midnight PNG time (00:00 UTC+10)
 
-Cron endpoints are secured with `CRON_SECRET` header.
+All cron endpoints are secured with `CRON_SECRET` header.
 
-## 📧 Email Configuration
+## 📧 Enhanced Email Configuration
 
-### Resend Setup
-
-1. Sign up at [resend.com](https://resend.com)
-2. Get API key
-3. Verify sending domain
-4. Add API key to environment variables
-
-### Email Templates
+### Email Templates v2.0.0
 
 The system sends emails for:
-- Loan approved
-- Loan disbursed
-- Loan rejected
-- Payment received
-- Overdue reminders
-- Tier upgrades
-- Default notices
-- Admin notifications
+- Loan approved/rejected/disbursed
+- Payment received with allocation breakdown
+- Overdue reminders with accrued interest
+- Tier upgrades with trustworthy path info
+- Default notices with rebuilding guidance
+- Interest calculation summaries
+- Admin notifications for system events
 
-## 📝 API Documentation
+## 📝 API Documentation v2.0.0
 
-### Authentication
+### New Simulation APIs
 
-#### POST `/api/auth/register`
-Register new customer account
+#### GET `/api/admin/simulation/historical`
+Historical portfolio analysis
+
+**Query Parameters**:
+- `startDate`: ISO date (optional, defaults to 6 months ago)
+- `endDate`: ISO date (optional, defaults to now)
+- `includeBreakdown`: boolean (default: true)
+- `includeTrends`: boolean (default: true)
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "dateRange": {
+      "startDate": "2024-06-29T00:00:00.000Z",
+      "endDate": "2024-12-29T00:00:00.000Z",
+      "totalDays": 183
+    },
+    "portfolio": {
+      "totalLoans": 150,
+      "v1Loans": 45,
+      "v2Loans": 105,
+      "totalDisbursed": 75000,
+      "totalRepaid": 68500,
+      "totalInterestEarned": 3200,
+      "averageLoanSize": 500
+    },
+    "performance": {
+      "defaultRate": 0.08,
+      "onTimeRate": 0.87,
+      "averageRepaymentDays": 28,
+      "profitMargin": 4.27,
+      "roi": 12.5
+    }
+  }
+}
+```
+
+#### POST `/api/admin/simulation/stress-test`
+Portfolio stress testing
 
 **Body**:
 ```json
 {
-  "name": "John Doe",
-  "email": "john@example.com",
-  "phone": "+675 7000 0001",
-  "password": "SecurePass123"
+  "scenario": "MODERATE",
+  "includeRecovery": true,
+  "includeRecommendations": true
 }
 ```
 
-#### POST `/api/auth/login`
-Login (via NextAuth credentials provider)
+**Custom Scenario**:
+```json
+{
+  "scenario": "custom",
+  "customDefaultRate": 0.12,
+  "includeRecovery": true
+}
+```
 
-### Customer APIs
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "scenario": {
+      "name": "Moderate Stress",
+      "defaultRate": 0.10,
+      "description": "10% default rate"
+    },
+    "impact": {
+      "affectedLoans": 15,
+      "additionalDefaults": 8,
+      "lossAmount": 4000,
+      "profitReduction": 5.3,
+      "newProfitMargin": -1.03
+    },
+    "portfolioHealth": {
+      "healthScore": 65,
+      "riskLevel": "medium",
+      "recommendations": [
+        "Implement stricter credit scoring",
+        "Increase interest rates to compensate for higher risk"
+      ]
+    },
+    "recovery": {
+      "timeToRecover": 120,
+      "requiredActions": [
+        "Implement immediate cost reduction measures"
+      ]
+    }
+  }
+}
+```
+
+### Enhanced Customer APIs
 
 #### POST `/api/customer/loans/apply`
-Apply for a new loan
+Apply for a new loan (v2.0.0 enhanced)
 
 **Body**:
 ```json
@@ -288,112 +440,146 @@ Apply for a new loan
   "success": true,
   "reference": "WP-202412-00001",
   "isAutoApproved": true,
-  "totalRepayable": 160,
-  "dueDate": "2025-01-25T00:00:00.000Z"
+  "loanVersion": "V2",
+  "calculation": {
+    "principal": 100,
+    "annualInterestRate": 4.00,
+    "dailyInterestRate": 0.01096,
+    "estimatedInterest": 0.33,
+    "interestCap": 4.00,
+    "totalRepayable": 100.33,
+    "dueDate": "2025-01-29T00:00:00.000Z"
+  },
+  "autoApprovalReasons": [
+    "Amount K100 within K200 limit",
+    "Trustworthy status verified",
+    "Sufficient funds available"
+  ]
 }
 ```
 
-#### GET `/api/customer/loans?status=disbursed`
-Get customer's loans
+#### GET `/api/customer/loans`
+Get customer's loans with real-time interest
 
-#### POST `/api/customer/payments/upload`
-Upload payment proof (multipart/form-data)
-
-**FormData**:
-- `loanId`: Loan ID
-- `amount`: Payment amount
-- `file`: Payment proof image/PDF
-
-### Admin APIs
-
-#### POST `/api/admin/loans/:id/approve`
-Approve a loan application
-
-#### POST `/api/admin/loans/:id/disburse`
-Disburse approved loan funds
-
-#### POST `/api/admin/payments/:id/verify`
-Verify payment proof
-
-**Body**:
+**Response**:
 ```json
 {
-  "approved": true,
-  "rejectionReason": "Optional if rejected"
+  "success": true,
+  "loans": [
+    {
+      "id": "...",
+      "reference": "WP-202412-00001",
+      "amount": 100,
+      "status": "ACTIVE",
+      "loanVersion": "V2",
+      "realTimeBalance": {
+        "outstandingPrincipal": 100,
+        "accruedInterest": 0.22,
+        "totalDue": 100.22,
+        "daysElapsed": 20,
+        "daysUntilDue": 10
+      }
+    }
+  ]
 }
 ```
 
-#### PUT `/api/admin/customers/:id/trustworthy`
-Set customer trustworthy status
+## 🧪 Testing v2.0.0
 
-**Body**:
-```json
-{
-  "isTrustworthy": true
-}
-```
-
-## 🧪 Testing
-
-### Unit Tests
+### Comprehensive Test Suite
 
 ```bash
+# Run all tests
 npm test
+
+# Run specific test suites
+npm run test:unit
+npm run test:integration
+
+# Run with coverage
+npm run test:coverage
 ```
 
-### Test Scenarios
+### Key Test Scenarios
 
-1. **Tier Progression**: Apply for 2 loans, repay on time, verify tier upgrade
-2. **Auto-Approval**: Set user as trustworthy, apply within limit, verify instant approval
-3. **Discount Calculation**: Verify trustworthy customers get correct discount
-4. **Partial Payments**: Make partial payment, verify principal-first allocation
-5. **Default Handling**: Wait 14+ days, verify downgrade to K50
+1. **Interest Calculation Accuracy**
+   - Daily rate calculations
+   - Interest cap enforcement
+   - Minimum interest charges
+   - Interest freeze at default
 
-## 🔒 Security
+2. **Payment Allocation Logic**
+   - Interest-first allocation
+   - Principal reduction
+   - Balance recalculation
+   - Partial payment handling
 
-- **Authentication**: JWT-based sessions with httpOnly cookies
-- **Authorization**: Role-based access control (customer/admin)
-- **Input Validation**: Zod schema validation on all inputs
-- **Password Hashing**: bcrypt with 12 salt rounds
-- **File Upload**: Type and size validation
-- **API Protection**: Authentication middleware on all protected routes
-- **Cron Security**: Secret token verification
+3. **Tier Progression**
+   - Dual trustworthy path validation
+   - Credit rebuilding scenarios
+   - Diamond tier protection
 
-## 📈 Success Metrics
+4. **Migration Integrity**
+   - v1.0.0 to v2.0.0 data migration
+   - Backward compatibility
+   - Calculation consistency
+
+5. **Portfolio Simulation**
+   - Historical analysis accuracy
+   - Stress scenario execution
+   - Break-even calculations
+
+## 🔒 Enhanced Security v2.0.0
+
+- **Rate Limiting**: Simulation endpoints protected against abuse
+- **Admin Bypass**: Administrators exempt from rate limits
+- **Audit Trail**: Complete calculation history for compliance
+- **Deterministic Calculations**: Same inputs always produce same outputs
+- **Interest Caps**: Protection against predatory lending
+- **Timezone Consistency**: Prevents date boundary manipulation
+- **Migration Validation**: Ensures data integrity during upgrades
+
+## 📈 Success Metrics v2.0.0
 
 The system is considered successful when:
-- ✅ Customers can apply for loans within their tier limits
-- ✅ Admin can approve/disburse/verify within 3 clicks
-- ✅ Auto-approval triggers correctly for eligible customers
-- ✅ Tier upgrades after 2 consecutive on-time payments
-- ✅ Defaults trigger account downgrade at 14+ days
-- ✅ Partial payments allocate to principal first
-- ✅ Financial metrics update in real-time
-- ✅ Daily reminders send automatically
-- ✅ All KYC documents uploadable and viewable
+- ✅ Daily interest calculations execute automatically at midnight PNG time
+- ✅ Interest-first payment allocation optimizes customer outcomes
+- ✅ Dual trustworthy paths provide flexible credit building
+- ✅ Portfolio simulation provides accurate risk assessment
+- ✅ Migration preserves all existing loan contracts
+- ✅ Audit trail enables regulatory compliance verification
+- ✅ Rate limiting prevents simulation endpoint abuse
+- ✅ Credit rebuilding allows customer recovery after default
 
-## 🐛 Troubleshooting
+## 🐛 Troubleshooting v2.0.0
 
-### MongoDB Connection Issues
-- Verify MONGODB_URI is correct
-- Check IP whitelist in MongoDB Atlas
-- Ensure database user has read/write permissions
+### Migration Issues
+- Check migration status: `GET /api/admin/migration/status`
+- Validate data integrity: `POST /api/admin/migration/validate`
+- Emergency rollback: `POST /api/admin/migration/rollback`
 
-### Email Not Sending
-- Verify RESEND_API_KEY is valid
-- Check sending domain is verified
-- Review Resend dashboard for errors
+### Interest Calculation Issues
+- Verify cron job execution: `GET /api/cron/calculate-interest?secret=$CRON_SECRET`
+- Check PNG timezone configuration: `PNG_TIMEZONE=Pacific/Port_Moresby`
+- Review calculation audit trail in InterestCalculation collection
 
-### Cron Jobs Not Running
-- Verify vercel.json is deployed
-- Check CRON_SECRET is set correctly
-- Review Vercel deployment logs
+### Rate Limiting Issues
+- Check rate limit headers in API responses
+- Verify admin bypass for administrative users
+- Adjust limits via environment variables
+
+### Simulation Performance
+- Monitor database query performance for large portfolios
+- Use date range limits to prevent excessive computation
+- Check rate limiting for concurrent simulation requests
 
 ## 📞 Support
 
 For issues or questions:
-- Email: support@wanpaus.com.pg
-- System admin: admin@wanpaus.com.pg
+- **Technical Support**: Create GitHub issues
+- **Migration Help**: Contact system administrator
+- **Business Logic**: Review TECHNICAL_DOCS.md
+- **API Documentation**: See enhanced API examples above
 
 ## 📄 License
 
@@ -401,10 +587,14 @@ This project is proprietary software for WanPaus operations.
 
 ## 🙏 Acknowledgments
 
-Built for microfinance operations in Papua New Guinea to provide accessible short-term loans with automated tier progression and transparent interest calculations.
+WanPaus v2.0.0 represents a major evolution in microfinance technology, providing sophisticated daily interest calculations, comprehensive portfolio management, and regulatory-compliant audit trails while maintaining complete backward compatibility with existing loan contracts.
+
+Built for microfinance operations in Papua New Guinea to provide accessible short-term loans with transparent, fair, and mathematically precise interest calculations.
 
 ---
 
-**Version**: 1.0.0  
-**Last Updated**: December 2024
+**Version**: 2.0.0  
+**Last Updated**: December 2024  
+**Migration**: Automatic from v1.0.0  
+**Compatibility**: Backward compatible with existing loans
 
