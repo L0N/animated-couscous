@@ -357,6 +357,58 @@ export function canApplyForAmount(
 }
 
 /**
+ * Check loan eligibility for customer API
+ */
+export async function checkEligibility(user: IUser, amount: number): Promise<{
+  eligible: boolean;
+  reason?: string;
+  details?: any;
+}> {
+  // Check if amount exceeds current limit
+  if (amount > user.currentLimit) {
+    return {
+      eligible: false,
+      reason: 'Amount exceeds credit limit',
+      details: {
+        requestedAmount: amount,
+        currentLimit: user.currentLimit,
+        maxAllowed: user.currentLimit
+      }
+    };
+  }
+
+  // Check minimum amount
+  if (amount < 10) {
+    return {
+      eligible: false,
+      reason: 'Amount below minimum',
+      details: {
+        requestedAmount: amount,
+        minimumAmount: 10
+      }
+    };
+  }
+
+  // Check if user is in rebuilding status
+  if (user.status === UserStatus.REBUILDING) {
+    // Rebuilding users can only access Bronze tier (K50)
+    if (amount > 50) {
+      return {
+        eligible: false,
+        reason: 'Account in rebuilding status',
+        details: {
+          status: user.status,
+          maxAllowedInRebuilding: 50,
+          guidance: 'Make on-time payments to restore full access'
+        }
+      };
+    }
+  }
+
+  return { eligible: true };
+}
+
+/**
  * Get credit rebuilding status and guidance
  */
 export function getCreditRebuildingInfo(user: IUser): {
