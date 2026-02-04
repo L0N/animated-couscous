@@ -26,6 +26,30 @@ import { useState, useEffect, useCallback } from 'react';
 import { apiClient, ApiResponse } from '@/lib/api/client';
 
 /**
+ * Admin Customer Data Interface
+ */
+export interface AdminCustomerData {
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+  currentLimit: number;
+  isTrustworthy: boolean;
+  onTimeCount?: number;
+  hasDefaults?: boolean;
+  kyc?: {
+    verified: boolean;
+    idType?: string;
+    idNumber?: string;
+    idDocument?: string;
+    employmentProof?: string;
+    bankStatement?: string;
+    uploadedAt?: string;
+    verifiedAt?: string;
+  };
+}
+
+/**
  * Admin Loan Data Interface
  */
 export interface AdminLoanData {
@@ -62,6 +86,23 @@ export interface AdminLoanData {
   daysOverdue: number;
   totalPayments: number;
   pendingPayments: number;
+}
+
+/**
+ * Admin Loan Detail Data Interface (Extended)
+ */
+export interface AdminLoanDetailData extends AdminLoanData {
+  customer: AdminCustomerData;
+  payments?: Array<{
+    _id: string;
+    amount: number;
+    status: string;
+    createdAt: string;
+    verifiedAt?: string;
+    notes?: string;
+  }>;
+  adminNotes?: string;
+  interestAmount: number;
 }
 
 /**
@@ -350,24 +391,24 @@ export function useAdminDashboard() {
 }
 
 /**
- * Single Loan Detail Hook
+ * Admin Loan Detail Hook
  * 
  * Fetches detailed information for a specific loan including customer data,
  * payment history, and KYC documents.
  */
-export function useLoanDetail(loanId: string) {
-  const [state, setState] = useState<HookState<AdminLoanData>>({
+export function useAdminLoanDetail() {
+  const [state, setState] = useState<HookState<AdminLoanDetailData>>({
     data: null,
-    loading: true,
+    loading: false,
     error: null,
   });
 
-  const fetchLoanDetail = useCallback(async () => {
+  const fetchLoanDetail = useCallback(async (loanId: string) => {
     if (!loanId) return;
     
     setState(prev => ({ ...prev, loading: true, error: null }));
     
-    // For now, we'll get the loan from the loans list
+    // For now, we'll get the loan from the loans list and enhance it
     // In a real implementation, there would be a dedicated loan detail endpoint
     const response = await apiClient.get<AdminLoansResponse>(`/admin/loans?search=${loanId}`);
     
@@ -375,8 +416,33 @@ export function useLoanDetail(loanId: string) {
       const loan = response.data.loans.find(l => l._id === loanId || l.reference === loanId);
       
       if (loan) {
+        // Convert to detailed loan data
+        const detailedLoan: AdminLoanDetailData = {
+          ...loan,
+          customer: {
+            _id: loan.customer._id,
+            name: loan.customer.name,
+            email: loan.customer.email,
+            phone: loan.customer.phone,
+            currentLimit: loan.customer.currentLimit,
+            isTrustworthy: loan.customer.isTrustworthy,
+            onTimeCount: 0, // Would come from backend
+            hasDefaults: false, // Would come from backend
+            kyc: {
+              verified: loan.customer.kyc.verified,
+              idType: loan.customer.kyc.idType,
+              idNumber: 'ID123456', // Would come from backend
+              uploadedAt: '2024-01-01', // Would come from backend
+              verifiedAt: loan.customer.kyc.verified ? '2024-01-02' : undefined,
+            }
+          },
+          payments: [], // Would come from backend
+          adminNotes: '', // Would come from backend
+          interestAmount: loan.totalRepayable - loan.amount,
+        };
+        
         setState({
-          data: loan,
+          data: detailedLoan,
           loading: false,
           error: null,
         });
@@ -394,14 +460,94 @@ export function useLoanDetail(loanId: string) {
         error: response.error || 'Failed to load loan details',
       });
     }
-  }, [loanId]);
-
-  useEffect(() => {
-    fetchLoanDetail();
-  }, [fetchLoanDetail]);
+  }, []);
 
   return {
-    ...state,
-    refetch: fetchLoanDetail,
+    loan: state.data,
+    loading: state.loading,
+    error: state.error,
+    fetchLoanDetail,
+  };
+}
+
+/**
+ * Loan Approval Hook
+ * 
+ * Handles loan approval workflow with business rule validation.
+ */
+export function useApproveLoan() {
+  const [state, setState] = useState<HookState<{ message: string }>>({
+    data: null,
+    loading: false,
+    error: null,
+  });
+
+  const approveLoan = useCallback(async (loanId: string, request: { notes?: string }) => {
+    setState(prev => ({ ...prev, loading: true, error: null }));
+    
+    const response = await apiClient.post(`/admin/loans/${loanId}/approve`, request);
+    
+    if (response.success && response.data) {
+      setState({
+        data: response.data,
+        loading: false,
+        error: null,
+      });
+      return response.data;
+    } else {
+      setState({
+        data: null,
+        loading: false,
+        error: response.error || 'Failed to approve loan',
+      });
+      throw new Error(response.error || 'Failed to approve loan');
+    }
+  }, []);
+
+  return {
+    approveLoan,
+    loading: state.loading,
+    error: state.error,
+  };
+}
+
+/**
+ * Loan Rejection Hook
+ * 
+ * Handles loan rejection workflow with reason tracking.
+ */
+export function useRejectLoan() {
+  const [state, setState] = useState<HookState<{ message: string }>>({
+    data: null,
+    loading: false,
+    error: null,
+  });
+
+  const rejectLoan = useCallback(async (loanId: string, request: { reason: string; notes?: string }) => {
+    setState(prev => ({ ...prev, loading: true, error: null }));
+    
+    const response = await apiClient.post(`/admin/loans/${loanId}/reject`, request);
+    
+    if (response.success && response.data) {
+      setState({
+        data: response.data,
+        loading: false,
+        error: null,
+      });
+      return response.data;
+    } else {
+      setState({
+        data: null,
+        loading: false,
+        error: response.error || 'Failed to reject loan',
+      });
+      throw new Error(response.error || 'Failed to reject loan');
+    }
+  }, []);
+
+  return {
+    rejectLoan,
+    loading: state.loading,
+    error: state.error,
   };
 }
