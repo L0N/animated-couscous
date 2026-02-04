@@ -1,8 +1,25 @@
-# WanPaus v3.0.0 - Advanced Microfinance Platform
+# WanPaus v3.1.0 - Advanced Microfinance Platform
 
-A sophisticated microfinance payday loan management system built for Papua New Guinea. WanPaus v3.0.0 features a complete customer frontend, daily-accruing interest calculations, dual trustworthy paths, comprehensive portfolio management, and regulatory-compliant audit trails.
+A sophisticated microfinance payday loan management system built for Papua New Guinea. WanPaus v3.1.0 features a complete admin frontend with loan approval workflows, customer frontend, daily-accruing interest calculations, dual trustworthy paths, comprehensive portfolio management, and regulatory-compliant audit trails.
 
-## 🚀 What's New in v3.0.0
+## 🚀 What's New in v3.1.0
+
+### 🎯 **Complete Admin Frontend (NEW)**
+- **Loan approval workflow**: Comprehensive approval/rejection system with business rule enforcement
+- **Portfolio dashboard**: Real-time 8-metric overview with performance indicators
+- **Advanced loan management**: Filtering, search, sorting, and pagination capabilities
+- **Document management**: Secure KYC document viewing and verification
+- **Customer context**: Detailed customer information with trustworthy status tracking
+- **Business rule integration**: Auto-approval logic and compliance indicators throughout
+
+### 🔧 **Enhanced Admin Infrastructure (NEW)**
+- **Role-based authentication**: Secure admin access with NextAuth.js integration
+- **Responsive admin interface**: Mobile-optimized design for field operations
+- **Modal-based workflows**: Efficient approval/rejection forms with validation
+- **Real-time calculations**: Live portfolio metrics and loan eligibility assessment
+- **Audit trail integration**: Comprehensive logging for compliance requirements
+
+## 🚀 Previous Updates (v3.0.0)
 
 ### 🎨 **Complete Customer Frontend (NEW)**
 - **5 Customer Pages**: Dashboard, loan application, loan history, payment upload, and profile management
