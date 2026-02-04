@@ -82,6 +82,15 @@ export interface ILoan extends Document {
   overdueSince?: Date;
   isAutoApproved: boolean;
   rejectionReason?: string;
+  // Admin action tracking
+  approvedAt?: Date;
+  approvedBy?: Types.ObjectId | IUser;
+  approvalNotes?: string;
+  disbursementMethod?: 'bank_transfer' | 'mobile_money' | 'cash';
+  rejectedAt?: Date;
+  rejectedBy?: Types.ObjectId | IUser;
+  rejectionNotes?: string;
+  allowReapplication?: boolean;
   // v2.0.0 fields
   loanVersion: LoanVersion;
   outstandingPrincipal?: number;

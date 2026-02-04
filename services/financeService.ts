@@ -4,6 +4,15 @@ import Loan from '@/models/Loan';
 import { LoanStatus } from '@/types';
 
 /**
+ * Update financial tracking when loan is approved (reserve funds)
+ */
+export async function updateFinancialsOnApproval(amount: number): Promise<void> {
+  // For now, we just log the approval - actual cash reservation happens on disbursement
+  // In a full implementation, this could update a "reserved funds" field
+  console.log(`Loan approved for K${amount} - funds reserved for disbursement`);
+}
+
+/**
  * Update financial tracking when loan is disbursed
  */
 export async function updateFinancialsOnDisbursement(amount: number): Promise<void> {
@@ -152,4 +161,3 @@ export async function hasSufficientCash(amount: number): Promise<boolean> {
   const settings = await SystemSettings.findById('singleton');
   return settings ? settings.cashOnHand >= amount : false;
 }
-

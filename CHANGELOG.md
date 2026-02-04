@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✨ Added
 
+#### Phase 2 Customer & Admin APIs (Complete)
+- **Customer payment upload**: `POST /api/customer/payments/upload` with file validation, secure storage, and admin notification
+- **Customer profile management**: `GET /api/customer/profile` and `PUT /api/customer/profile` with security guardrails and immutable field protection
+- **Admin loan management**: `GET /api/admin/loans` with pagination, filtering, search, and customer data aggregation
+- **Admin loan approval**: `POST /api/admin/loans/:id/approve` with comprehensive validation, financial tracking, and customer notification
+- **Admin loan rejection**: `POST /api/admin/loans/:id/reject` with reason tracking, audit trail, and customer communication
+- **Enhanced Loan model**: Added admin action tracking fields (approvedAt, approvedBy, rejectionReason, etc.)
+- **Finance service integration**: Added approval tracking and financial impact logging
+- **Email service enhancement**: Generic sendEmail function for flexible notification system
+
 #### Phase 1 Customer APIs (Complete)
 - **Customer loan application**: `POST /api/customer/apply` with comprehensive eligibility checking and auto-approval integration
 - **Customer dashboard**: `GET /api/customer/dashboard` providing real-time overview of loans, tier progress, and alerts
