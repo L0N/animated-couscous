@@ -390,17 +390,163 @@ Paginated loan history with filtering and payment details.
 }
 ```
 
-### 🚧 **Planned APIs (Roadmap)**
+#### POST `/api/customer/payments/upload`
+Submit payment proof with file validation and secure storage.
 
-The following APIs are documented for future implementation:
+**Authentication**: Customer JWT required
 
-#### Customer APIs (Phase 2 - Planned)
-- `POST /api/customer/payments/upload` - Payment proof upload
-- `GET /api/customer/profile` - Customer profile management
+**Body**: Multipart form data
+```
+file: File (image/PDF, max 10MB)
+loanId: string
+amount: number
+description?: string
+```
 
-#### Admin Management APIs (Planned)
-- `GET /api/admin/loans` - Loan management dashboard
-- `POST /api/admin/loans/:id/approve` - Loan approval
+**Response**:
+```json
+{
+  "success": true,
+  "payment": {
+    "id": "payment_id",
+    "amount": 200,
+    "status": "pending",
+    "proofUrl": "https://blob.vercel-storage.com/...",
+    "submittedAt": "2025-01-15T10:00:00.000Z",
+    "loan": {
+      "reference": "WP-202501-00001",
+      "remainingBalance": 200.66
+    }
+  },
+  "message": "Payment proof uploaded successfully. It will be verified by our team within 24 hours."
+}
+```
+
+#### GET `/api/customer/profile`
+Retrieve customer profile with sensitive data sanitized.
+
+**Authentication**: Customer JWT required
+
+**Response**:
+```json
+{
+  "success": true,
+  "profile": {
+    "id": "user_id",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "phone": "+675123456789",
+    "currentLimit": 200,
+    "isTrustworthy": false,
+    "status": "active",
+    "kyc": {
+      "idType": "national",
+      "idNumber": "***1234",
+      "verified": true,
+      "hasIdDocument": true,
+      "hasEmploymentProof": true,
+      "hasBankStatement": false
+    },
+    "tierInfo": {
+      "onTimeCount": 1,
+      "consecutiveOnTimePayments": 5,
+      "trustworthyPath": "tier_based"
+    }
+  }
+}
+```
+
+#### PUT `/api/customer/profile`
+Update customer profile with security guardrails.
+
+**Authentication**: Customer JWT required
+
+**Body**:
+```json
+{
+  "name": "John Smith",
+  "phone": "+675987654321",
+  "kyc": {
+    "idType": "driver",
+    "idNumber": "DL123456789"
+  }
+}
+```
+
+#### GET `/api/admin/loans`
+Retrieve paginated loan list with filtering and customer information.
+
+**Authentication**: Admin session required
+
+**Query Parameters**:
+```
+?status=applied&page=1&limit=20&sortBy=createdAt&sortOrder=desc&search=john
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "loans": [
+    {
+      "_id": "loan_id",
+      "reference": "WP-202501-00001",
+      "amount": 200,
+      "status": "applied",
+      "customer": {
+        "name": "John Doe",
+        "email": "john@example.com",
+        "kyc": { "verified": true },
+        "currentLimit": 200,
+        "isTrustworthy": false
+      },
+      "remainingBalance": 200.66,
+      "daysOverdue": 0,
+      "totalPayments": 0,
+      "pendingPayments": 0
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "totalCount": 45,
+    "totalPages": 3
+  }
+}
+```
+
+#### POST `/api/admin/loans/:id/approve`
+Approve a loan application with validation and customer notification.
+
+**Authentication**: Admin session required
+
+**Body**:
+```json
+{
+  "notes": "Customer meets all criteria",
+  "disbursementMethod": "bank_transfer"
+}
+```
+
+#### POST `/api/admin/loans/:id/reject`
+Reject a loan application with reason tracking.
+
+**Authentication**: Admin session required
+
+**Body**:
+```json
+{
+  "reason": "incomplete_kyc",
+  "notes": "Please complete KYC verification",
+  "allowReapplication": true
+}
+```
+
+### 🚧 **Planned APIs (Phase 3)**
+
+The following APIs are planned for future implementation:
+
+#### Admin Management APIs (Phase 3)
 - `POST /api/admin/loans/:id/disburse` - Loan disbursement
 - `POST /api/admin/payments/:id/verify` - Payment verification
 - `PUT /api/admin/customers/:id/trustworthy` - Trustworthy status management

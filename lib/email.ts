@@ -5,6 +5,28 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@wanpaus.com.pg';
 
 /**
+ * Generic email sending function
+ */
+export async function sendEmail(options: {
+  to: string;
+  subject: string;
+  html: string;
+  from?: string;
+}): Promise<void> {
+  try {
+    await resend.emails.send({
+      from: options.from || `WanPaus <${FROM_EMAIL}>`,
+      to: options.to,
+      subject: options.subject,
+      html: options.html,
+    });
+  } catch (error) {
+    console.error('Failed to send email:', error);
+    throw error;
+  }
+}
+
+/**
  * Send loan approved notification
  */
 export async function sendLoanApproved(data: LoanEmailData): Promise<void> {
@@ -205,4 +227,3 @@ export async function sendAdminNotification(action: string, details: string): Pr
     console.error('Failed to send admin notification:', error);
   }
 }
-
