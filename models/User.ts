@@ -44,6 +44,14 @@ const kycSchema = new Schema({
  * Supports both v1.0.0 legacy fields and v2.0.1 enhanced features
  */
 const userSchema = new Schema<IUser>({
+  // === MULTI-TENANT SUPPORT ===
+  tenantId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Tenant',
+    required: [true, 'Tenant ID is required'],
+    index: true,
+  },
+  
   // === BASIC PROFILE INFORMATION ===
   name: {
     type: String,
@@ -135,21 +143,25 @@ const userSchema = new Schema<IUser>({
 });
 
 /**
- * Database indexes for query optimization
- * Critical for performance with large user bases
+ * Database indexes for query optimization (tenant-scoped for v4.0)
+ * Critical for performance with large user bases and multi-tenant isolation
  */
-// Authentication and basic queries
-userSchema.index({ email: 1 }); // Unique login lookup
-userSchema.index({ role: 1 }); // Admin vs customer filtering
+// Authentication and basic queries (tenant-scoped)
+userSchema.index({ tenantId: 1, email: 1 }, { unique: true }); // Email unique per tenant
+userSchema.index({ tenantId: 1, role: 1 }); // Admin vs customer filtering per tenant
 
-// Credit system queries
-userSchema.index({ currentLimit: 1 }); // Tier-based analytics
-userSchema.index({ isTrustworthy: 1 }); // Auto-approval eligibility
-userSchema.index({ status: 1 }); // Active vs rebuilding users
+// Credit system queries (tenant-scoped)
+userSchema.index({ tenantId: 1, currentLimit: 1 }); // Tier-based analytics per tenant
+userSchema.index({ tenantId: 1, isTrustworthy: 1 }); // Auto-approval eligibility per tenant
+userSchema.index({ tenantId: 1, status: 1 }); // Active vs rebuilding users per tenant
 
-// Payment tracking queries (v2.0.1)
-userSchema.index({ consecutiveOnTimePayments: 1 }); // Tier progression tracking
-userSchema.index({ totalConsecutiveOnTimePayments: 1 }); // Trustworthy status tracking
+// Payment tracking queries (v2.0.1, tenant-scoped)
+userSchema.index({ tenantId: 1, consecutiveOnTimePayments: 1 }); // Tier progression tracking
+userSchema.index({ tenantId: 1, totalConsecutiveOnTimePayments: 1 }); // Trustworthy status tracking
+
+// Legacy single-tenant indexes (for backward compatibility)
+userSchema.index({ email: 1 }); // Legacy unique login lookup
+userSchema.index({ role: 1 }); // Legacy admin vs customer filtering
 
 /**
  * Security: Remove password from JSON responses

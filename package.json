@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "tsx scripts/seedSystem.ts",
-    "seed:system": "tsx scripts/seedSystem.ts"
+    "seed:system": "tsx scripts/seedSystem.ts",
+    "setup:tenant": "tsx scripts/setupTenant.ts",
+    "worker:start": "tsx scripts/startWorker.ts",
+    "worker:stop": "tsx scripts/stopWorker.ts"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
