@@ -114,6 +114,36 @@ const loanSchema = new Schema<ILoan>({
   },
   rejectionReason: String,
   // Admin-provided reason if loan application was rejected
+  
+  // === ADMIN ACTION TRACKING ===
+  approvedAt: Date,
+  // Timestamp when loan was approved by admin
+  approvedBy: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    // Admin user who approved the loan
+  },
+  approvalNotes: String,
+  // Admin notes during approval process
+  disbursementMethod: {
+    type: String,
+    enum: ['bank_transfer', 'mobile_money', 'cash'],
+    // Method chosen for fund disbursement
+  },
+  rejectedAt: Date,
+  // Timestamp when loan was rejected by admin
+  rejectedBy: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    // Admin user who rejected the loan
+  },
+  rejectionNotes: String,
+  // Admin notes during rejection process
+  allowReapplication: {
+    type: Boolean,
+    default: true,
+    // Whether customer can reapply after rejection
+  },
 
   // === v2.0.1 DAILY INTEREST SYSTEM ===
   loanVersion: {
