@@ -26,8 +26,15 @@ export default function Home() {
       if (result?.error) {
         setError('Invalid email or password');
       } else {
-        // Redirect will be handled by middleware based on role
-        router.push('/customer/dashboard');
+        // Get the session to determine redirect based on role
+        const response = await fetch('/api/auth/session');
+        const session = await response.json();
+        
+        if (session?.user?.role === 'admin') {
+          router.push('/admin/dashboard');
+        } else {
+          router.push('/customer/dashboard');
+        }
         router.refresh();
       }
     } catch (err) {
@@ -103,4 +110,3 @@ export default function Home() {
     </div>
   );
 }
-
