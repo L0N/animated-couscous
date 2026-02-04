@@ -30,14 +30,28 @@ interface LoanApplicationRequest {
   employmentStatus?: string;
 }
 
+/**
+ * Main loan application handler
+ * 
+ * Data Flow:
+ * 1. Request validation → Zod schema validation
+ * 2. User verification → Database lookup and status check
+ * 3. Eligibility check → Tier limits, KYC, account status
+ * 4. Duplicate prevention → Check for existing active loans
+ * 5. Loan calculation → Interest rates and repayment terms
+ * 6. Auto-approval evaluation → 7-criteria validation
+ * 7. Database persistence → Create loan record
+ * 8. Response generation → Return loan details and status
+ */
 async function handleLoanApplication(
   request: NextRequest,
-  user: any
+  user: any // JWT-decoded user from customerAuth middleware
 ): Promise<NextResponse> {
   try {
     await connectDB();
 
-    // Parse and validate request body
+    // === STEP 1: REQUEST VALIDATION ===
+    // Parse and validate request body against Zod schema
     const body = await request.json();
     const validation = await validateRequestBody(applyLoanSchema, body);
     
@@ -54,7 +68,8 @@ async function handleLoanApplication(
 
     const { amount, termDays, purpose, monthlyIncome, employmentStatus } = validation.data as LoanApplicationRequest;
 
-    // Get fresh user data
+    // === STEP 2: USER VERIFICATION ===
+    // Get fresh user data from database (JWT token may be stale)
     const currentUser = await User.findById(user.id);
     if (!currentUser) {
       return NextResponse.json(
@@ -63,7 +78,8 @@ async function handleLoanApplication(
       );
     }
 
-    // Check basic eligibility
+    // === STEP 3: ELIGIBILITY VALIDATION ===
+    // Check tier limits, KYC status, account status, and credit history
     const eligibilityCheck = await checkEligibility(currentUser, amount);
     if (!eligibilityCheck.eligible) {
       return NextResponse.json(
@@ -77,7 +93,8 @@ async function handleLoanApplication(
       );
     }
 
-    // Check for existing active loans
+    // === STEP 4: DUPLICATE PREVENTION ===
+    // Ensure customer doesn't have multiple active loans
     const existingLoan = await Loan.findOne({
       userId: user.id,
       status: { $in: [LoanStatus.APPLIED, LoanStatus.APPROVED, LoanStatus.DISBURSED] }

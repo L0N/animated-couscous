@@ -5,6 +5,30 @@ All notable changes to WanPaus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### ✨ Added
+
+#### Phase 1 Customer APIs (Complete)
+- **Customer loan application**: `POST /api/customer/apply` with comprehensive eligibility checking and auto-approval integration
+- **Customer dashboard**: `GET /api/customer/dashboard` providing real-time overview of loans, tier progress, and alerts
+- **Customer loan history**: `GET /api/customer/loans` with pagination, filtering, and payment details
+- **Customer authentication**: JWT-based authentication middleware for secure customer API access
+- **Auto-approval integration**: Seamless 7-criteria validation during loan application process
+- **Tier progression tracking**: Real-time tier advancement and trustworthy status monitoring
+
+#### Enhanced Documentation
+- **Comprehensive code comments**: Added detailed data flow and business logic explanations across User and Loan models
+- **API documentation**: Complete request/response examples for all implemented customer endpoints
+- **Project structure updates**: Accurate reflection of implemented vs planned features
+
+### 🔧 Changed
+
+#### Documentation Accuracy
+- **Roadmap updates**: Marked Phase 1 as completed, updated Phase 2 scope
+- **API reference**: Moved implemented customer APIs from "Planned" to "Implemented" section
+- **Project structure**: Added middleware directory and customer API endpoints
+
 ## [2.0.1] - 2024-12-29
 
 ### 🐛 Fixed
