@@ -131,7 +131,10 @@ wanpaus/
 │   │   ├── auth/                    # 🚧 NextAuth endpoints (planned)
 │   │   ├── cron/
 │   │   │   └── calculate-interest/  # Daily interest calculation
-│   │   └── customer/                # 🚧 Customer APIs (planned)
+│   │   └── customer/                # ✅ Customer APIs (Phase 1 complete)
+│   │       ├── apply/               # Loan application endpoint
+│   │       ├── dashboard/           # Customer overview endpoint
+│   │       └── loans/               # Loan history endpoint
 │   ├── globals.css
 │   ├── layout.tsx
 │   └── page.tsx
@@ -141,6 +144,9 @@ wanpaus/
 │   ├── email.ts                     # Email service
 │   ├── rateLimiting.ts              # Rate limiting utilities
 │   └── utils.ts                     # Utility functions
+├── middleware/
+│   ├── auth.ts                      # Admin authentication middleware
+│   └── customerAuth.ts              # ✅ Customer JWT authentication (Phase 1)
 ├── models/
 │   ├── User.ts                      # Enhanced with v2.0.1 fields
 │   ├── Loan.ts                      # Enhanced with v2.0.1 fields
@@ -265,13 +271,130 @@ x-cron-secret: your-cron-secret
 }
 ```
 
+#### POST `/api/customer/apply`
+Submit loan application with eligibility checking and auto-approval.
+
+**Authentication**: Customer JWT required
+
+**Body**:
+```json
+{
+  "amount": 200,
+  "termDays": 30,
+  "purpose": "Business expansion",
+  "monthlyIncome": 1500,
+  "employmentStatus": "employed"
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "loan": {
+    "reference": "WP-202501-00001",
+    "amount": 200,
+    "termDays": 30,
+    "interestRate": 0.0001096,
+    "totalRepayable": 200.66,
+    "status": "approved",
+    "isAutoApproved": true,
+    "dueDate": "2025-02-15T00:00:00.000Z"
+  },
+  "message": "Loan auto-approved! Funds will be disbursed within 24 hours."
+}
+```
+
+#### GET `/api/customer/dashboard`
+Comprehensive customer overview with real-time data.
+
+**Authentication**: Customer JWT required
+
+**Response**:
+```json
+{
+  "user": {
+    "name": "John Doe",
+    "currentLimit": 200,
+    "isTrustworthy": false,
+    "status": "ACTIVE"
+  },
+  "activeLoans": [
+    {
+      "reference": "WP-202501-00001",
+      "amount": 200,
+      "status": "disbursed",
+      "dueDate": "2025-02-15T00:00:00.000Z",
+      "remainingBalance": 200.66
+    }
+  ],
+  "tierInfo": {
+    "currentTier": "Gold",
+    "currentLimit": 200,
+    "nextTier": "Platinum",
+    "nextLimit": 500,
+    "progressToNext": "1 more on-time payment needed"
+  },
+  "alerts": [
+    {
+      "type": "tier_progress",
+      "message": "1 more on-time payment for Platinum tier upgrade"
+    }
+  ]
+}
+```
+
+#### GET `/api/customer/loans`
+Paginated loan history with filtering and payment details.
+
+**Authentication**: Customer JWT required
+
+**Query Parameters**:
+```
+?status=repaid&includePayments=true&page=1&limit=10
+```
+
+**Response**:
+```json
+{
+  "loans": [
+    {
+      "reference": "WP-202501-00001",
+      "amount": 200,
+      "status": "repaid",
+      "createdAt": "2025-01-15T10:00:00.000Z",
+      "repaidAt": "2025-02-14T15:30:00.000Z",
+      "totalRepayable": 200.66,
+      "payments": [
+        {
+          "amount": 200.66,
+          "paymentDate": "2025-02-14T15:30:00.000Z",
+          "principalPortion": 200.00,
+          "interestPortion": 0.66
+        }
+      ]
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 5,
+    "totalPages": 1
+  },
+  "summary": {
+    "totalLoans": 5,
+    "totalBorrowed": 750,
+    "totalRepaid": 750.85,
+    "onTimePayments": 5
+  }
+}
+```
+
 ### 🚧 **Planned APIs (Roadmap)**
 
 The following APIs are documented for future implementation:
 
-#### Customer APIs (Planned)
-- `POST /api/customer/loans/apply` - Loan application
-- `GET /api/customer/loans` - Customer loan history
+#### Customer APIs (Phase 2 - Planned)
 - `POST /api/customer/payments/upload` - Payment proof upload
 - `GET /api/customer/profile` - Customer profile management
 
@@ -403,13 +526,17 @@ The system includes comprehensive seeding scripts for development and testing.
 
 ## 🚧 Roadmap
 
-### Phase 1: Core Customer Features (Next Sprint)
-- [ ] Customer loan application API
-- [ ] Customer dashboard implementation
-- [ ] Payment upload functionality
-- [ ] Customer authentication flow
+### ✅ Phase 1: Core Customer Features (COMPLETED)
+- [x] Customer loan application API (`POST /api/customer/apply`)
+- [x] Customer dashboard implementation (`GET /api/customer/dashboard`)
+- [x] Customer loan history (`GET /api/customer/loans`)
+- [x] Customer authentication flow (JWT middleware)
+- [x] Auto-approval integration
+- [x] Tier progression tracking
 
-### Phase 2: Admin Management (Following Sprint)
+### Phase 2: Admin Management (Current Sprint)
+- [ ] Payment upload functionality (`POST /api/customer/payments/upload`)
+- [ ] Customer profile management (`GET /api/customer/profile`)
 - [ ] Loan approval workflow APIs
 - [ ] Payment verification system
 - [ ] Customer management interface
@@ -440,4 +567,3 @@ This project is proprietary software. All rights reserved.
 ---
 
 WanPaus v2.0.1 represents a major evolution in microfinance technology, providing sophisticated daily interest calculations, comprehensive portfolio management, and regulatory-compliant audit trails while maintaining complete backward compatibility with existing loan contracts.
-
