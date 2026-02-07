@@ -28,12 +28,20 @@ import { ILoan, LoanStatus, LoanVersion } from '@/types';
  * Maintains backward compatibility while enabling advanced features
  */
 const loanSchema = new Schema<ILoan>({
+  // === MULTI-TENANT SUPPORT ===
+  tenantId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Tenant',
+    required: [true, 'Tenant ID is required'],
+    index: true,
+  },
+  
   // === LOAN IDENTIFICATION ===
   reference: {
     type: String,
     required: true,
-    unique: true,
     // Auto-generated format: WP-YYYYMM-00001 (e.g., WP-202501-00001)
+    // Unique per tenant, not globally unique
   },
   userId: {
     type: Schema.Types.ObjectId,
@@ -190,31 +198,36 @@ const loanSchema = new Schema<ILoan>({
 });
 
 /**
- * Database indexes for optimal query performance
- * Critical for loan management and reporting operations
+ * Database indexes for optimal query performance (tenant-scoped for v4.0)
+ * Critical for loan management and reporting operations with multi-tenant isolation
  */
-// Core loan queries
-loanSchema.index({ userId: 1 }); // Customer loan lookup
-loanSchema.index({ status: 1 }); // Status-based filtering (admin dashboard)
-loanSchema.index({ dueDate: 1 }); // Overdue detection and reminders
-loanSchema.index({ reference: 1 }); // Unique loan reference lookup
-loanSchema.index({ createdAt: -1 }); // Recent loans first
+// Core loan queries (tenant-scoped)
+loanSchema.index({ tenantId: 1, userId: 1 }); // Customer loan lookup per tenant
+loanSchema.index({ tenantId: 1, status: 1 }); // Status-based filtering per tenant
+loanSchema.index({ tenantId: 1, dueDate: 1 }); // Overdue detection per tenant
+loanSchema.index({ tenantId: 1, reference: 1 }, { unique: true }); // Unique reference per tenant
+loanSchema.index({ tenantId: 1, createdAt: -1 }); // Recent loans per tenant
 
-// v2.0.1 daily interest system indexes
-loanSchema.index({ loanVersion: 1 }); // Version-specific queries
-loanSchema.index({ lastInterestCalcDate: 1 }); // Daily cron job optimization
-loanSchema.index({ loanVersion: 1, status: 1 }); // Version + status filtering
-loanSchema.index({ userId: 1, loanVersion: 1 }); // Customer version-specific loans
+// v2.0.1 daily interest system indexes (tenant-scoped)
+loanSchema.index({ tenantId: 1, loanVersion: 1 }); // Version-specific queries per tenant
+loanSchema.index({ tenantId: 1, lastInterestCalcDate: 1 }); // Daily cron job per tenant
+loanSchema.index({ tenantId: 1, loanVersion: 1, status: 1 }); // Version + status per tenant
+loanSchema.index({ tenantId: 1, userId: 1, loanVersion: 1 }); // Customer version-specific loans
+
+// Legacy single-tenant indexes (for backward compatibility)
+loanSchema.index({ userId: 1 }); // Legacy customer loan lookup
+loanSchema.index({ status: 1 }); // Legacy status-based filtering
+loanSchema.index({ reference: 1 }); // Legacy unique loan reference lookup
 
 /**
- * Pre-save hook: Automatic reference number generation
+ * Pre-save hook: Automatic reference number generation (tenant-scoped for v4.0)
  * 
- * Generates unique loan references in format: WP-YYYYMM-00001
+ * Generates unique loan references per tenant in format: WP-YYYYMM-00001
  * - WP: WanPaus prefix
  * - YYYYMM: Year and month of creation
- * - 00001: Sequential number within that month
+ * - 00001: Sequential number within that month and tenant
  * 
- * Example: WP-202501-00001 (first loan in January 2025)
+ * Example: WP-202501-00001 (first loan in January 2025 for this tenant)
  */
 loanSchema.pre('save', async function (next) {
   if (this.isNew && !this.reference) {
@@ -223,12 +236,13 @@ loanSchema.pre('save', async function (next) {
     const month = (now.getMonth() + 1).toString().padStart(2, '0');
     const yearMonth = year + month;
 
-    // Count existing loans with this year-month prefix
+    // Count existing loans with this year-month prefix for this tenant
     const count = await mongoose.models.Loan.countDocuments({
+      tenantId: this.tenantId,
       reference: new RegExp(`^WP-${yearMonth}`),
     });
 
-    // Generate sequential reference number
+    // Generate sequential reference number (tenant-scoped)
     this.reference = `WP-${yearMonth}-${(count + 1).toString().padStart(5, '0')}`;
   }
   next();
